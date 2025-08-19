@@ -5,6 +5,7 @@ import ResultsPanel from "@/components/results-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search, PillBottle, BarChart3, Info, Building, FlaskConical, Pill } from "lucide-react";
+import { useDebouncedSearch } from "@/hooks/use-debounced-search";
 
 interface Statistics {
   totalMedicines: number;
@@ -15,31 +16,34 @@ interface Statistics {
 
 export default function Home() {
   const [recognitionResults, setRecognitionResults] = useState<any>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
 
-  const { data: statistics } = useQuery<Statistics>({
+  // Use optimized statistics query with better caching
+  const { data: statistics, isLoading: statisticsLoading } = useQuery<Statistics>({
     queryKey: ["/api/statistics"],
+    staleTime: 10 * 60 * 1000, // Cache statistics for 10 minutes
+    gcTime: 30 * 60 * 1000, // Keep in memory for 30 minutes
+  });
+
+  // Use debounced search for better performance
+  const searchMedicines = async (query: string) => {
+    const response = await fetch(`/api/medicines/search?q=${encodeURIComponent(query)}`);
+    const data = await response.json();
+    return data.medicines || [];
+  };
+
+  const {
+    query: searchQuery,
+    results: searchResults,
+    isLoading: searchLoading,
+    updateQuery: setSearchQuery,
+  } = useDebouncedSearch({
+    searchFn: searchMedicines,
+    delay: 300,
+    minLength: 2,
   });
 
   const handleRecognitionResult = (results: any) => {
     setRecognitionResults(results);
-  };
-
-  const handleManualSearch = async (query: string) => {
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/medicines/search?q=${encodeURIComponent(query)}`);
-      const data = await response.json();
-      setSearchResults(data.medicines || []);
-    } catch (error) {
-      console.error("Search error:", error);
-      setSearchResults([]);
-    }
   };
 
   return (
@@ -81,10 +85,8 @@ export default function Home() {
             recognitionResults={recognitionResults}
             searchQuery={searchQuery}
             searchResults={searchResults}
-            onSearchQueryChange={(query) => {
-              setSearchQuery(query);
-              handleManualSearch(query);
-            }}
+            searchLoading={searchLoading}
+            onSearchQueryChange={setSearchQuery}
           />
         </div>
 
