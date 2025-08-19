@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedScript - Handwriting to Medicine Recognition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        medical: {
+                            primary: '#1976D2',
+                            secondary: '#2196F3',
+                            success: '#4CAF50',
+                            warning: '#FF9800',
+                            error: '#F44336'
+                        }
+                    },
+                    fontFamily: {
+                        'inter': ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 font-inter">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <i class="fas fa-prescription text-medical-primary text-2xl mr-3"></i>
+                        <h1 class="text-xl font-bold text-gray-900">MedScript</h1>
+                    </div>
+                </div>
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#" class="text-medical-primary font-medium">Recognize</a>
+                    <a href="#" class="text-gray-500 hover:text-gray-700">Search</a>
+                    <a href="#" class="text-gray-500 hover:text-gray-700">History</a>
+                    <a href="#" class="text-gray-500 hover:text-gray-700">Help</a>
+                </nav>
+                <button class="md:hidden">
+                    <i class="fas fa-bars text-gray-500"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <!-- Title Section -->
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-bold text-gray-900 mb-2">Handwriting Recognition</h2>
+            <p class="text-lg text-gray-600">Write medicine names and get instant matches from our database</p>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- @COMPONENT: HandwritingInput [canvas, controls] -->
+            <!-- Drawing Canvas Section -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-pen-nib text-medical-primary mr-2"></i>
+                        Write Here
+                    </h3>
+                    <div class="flex space-x-2">
+                        <button data-event="click:clearCanvas" class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                            <i class="fas fa-eraser mr-1"></i>
+                            Clear
+                        </button>
+                        <button data-event="click:undoStroke" class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                            <i class="fas fa-undo mr-1"></i>
+                            Undo
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Canvas Container -->
+                <div class="relative border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                    <!-- @FUNCTIONALITY: This canvas should implement handwriting recognition using Google Handwriting API -->
+                    <canvas 
+                        id="handwritingCanvas" 
+                        width="500" 
+                        height="300" 
+                        class="w-full h-64 cursor-crosshair rounded-lg bg-white"
+                        data-implementation="Implement touch/mouse drawing, stroke capture, and API integration"
+                    ></canvas>
+                    
+                    <!-- Overlay Instructions -->
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none" id="canvasInstructions">
+                        <div class="text-center text-gray-400">
+                            <i class="fas fa-hand-paper text-4xl mb-2"></i>
+                            <p class="text-sm">Write medicine name here</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recognition Controls -->
+                <div class="mt-4 flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" class="rounded text-medical-primary mr-2" checked>
+                            <span class="text-sm text-gray-700">Real-time recognition</span>
+                        </label>
+                    </div>
+                    <button 
+                        data-event="click:recognizeHandwriting" 
+                        class="px-6 py-2 bg-medical-primary text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                        data-implementation="Should process canvas strokes and call Google Handwriting API"
+                    >
+                        <i class="fas fa-search mr-2"></i>
+                        Recognize
+                    </button>
+                </div>
+
+                <!-- Recognition Status -->
+                <!-- @STATE: isRecognizing:boolean = false -->
+                <div class="mt-4 hidden" id="recognitionStatus">
+                    <div class="bg-blue-50 border border-blue-200 rounded-md p-3">
+                        <div class="flex items-center">
+                            <i class="fas fa-spinner fa-spin text-medical-primary mr-2"></i>
+                            <span class="text-sm text-blue-800">Processing handwriting...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: HandwritingInput -->
+
+            <!-- @COMPONENT: ResultsPanel [search results, medicine details] -->
+            <!-- Results Section -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-pills text-medical-primary mr-2"></i>
+                        Recognition Results
+                    </h3>
+                    <div class="text-sm text-gray-500" data-mock="true">
+                        <span data-bind="results.length">0</span> matches found
+                    </div>
+                </div>
+
+                <!-- Search Fallback -->
+                <div class="mb-6">
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            placeholder="Or search manually..." 
+                            class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-medical-primary focus:border-medical-primary"
+                            data-event="input:handleManualSearch"
+                        >
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+                </div>
+
+                <!-- Recognition Candidates -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-medium text-gray-700 mb-3">Recognition Candidates</h4>
+                    <!-- @MAP: recognitionCandidates.map(candidate => ( -->
+                    <div class="space-y-2" data-mock="true">
+                        <div class="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                            <span class="text-sm text-gray-700" data-bind="candidate.text">Augmentin</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="bg-medical-success text-white text-xs px-2 py-1 rounded">
+                                    <span data-bind="candidate.confidence">95%</span>
+                                </div>
+                                <button class="text-medical-primary hover:text-blue-700">
+                                    <i class="fas fa-arrow-right text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                            <span class="text-sm text-gray-700" data-bind="candidate.text">Azithral</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="bg-medical-warning text-white text-xs px-2 py-1 rounded">
+                                    <span data-bind="candidate.confidence">78%</span>
+                                </div>
+                                <button class="text-medical-primary hover:text-blue-700">
+                                    <i class="fas fa-arrow-right text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_MAP )) -->
+                </div>
+
+                <!-- Matched Medicines -->
+                <div>
+                    <h4 class="text-sm font-medium text-gray-700 mb-3">Matched Medicines</h4>
+                    
+                    <!-- @MAP: matchedMedicines.map(medicine => ( -->
+                    <div class="space-y-4" data-mock="true">
+                        <!-- Medicine Card 1 -->
+                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div class="flex items-start justify-between mb-2">
+                                <div>
+                                    <h5 class="font-semibold text-gray-900" data-bind="medicine.name">Augmentin 625 Duo Tablet</h5>
+                                    <p class="text-sm text-medical-primary font-medium" data-bind="medicine.brand_name">Augmentin</p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                                        Match: <span data-bind="medicine.matchScore">92%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-2 text-sm">
+                                <div class="flex items-center text-gray-600">
+                                    <i class="fas fa-building text-xs w-4 mr-2"></i>
+                                    <span data-bind="medicine.manufacturer_name">Glaxo SmithKline Pharmaceuticals Ltd</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <i class="fas fa-flask text-xs w-4 mr-2"></i>
+                                    <span data-bind="medicine.short_composition">Amoxycillin (500mg) + Clavulanic Acid (125mg)</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <i class="fas fa-prescription-bottle text-xs w-4 mr-2"></i>
+                                    <span data-bind="medicine.category">Tablet</span>
+                                    <span class="mx-2">•</span>
+                                    <span class="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs" data-bind="medicine.rx_required">Prescription Required</span>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 flex space-x-2">
+                                <button class="px-3 py-1 bg-medical-primary text-white text-xs rounded hover:bg-blue-700 transition-colors">
+                                    View Details
+                                </button>
+                                <button class="px-3 py-1 border border-gray-300 text-gray-700 text-xs rounded hover:bg-gray-50 transition-colors">
+                                    Save to List
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Medicine Card 2 -->
+                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div class="flex items-start justify-between mb-2">
+                                <div>
+                                    <h5 class="font-semibold text-gray-900" data-bind="medicine.name">Azithral 500 Tablet</h5>
+                                    <p class="text-sm text-medical-primary font-medium" data-bind="medicine.brand_name">Azithral</p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
+                                        Match: <span data-bind="medicine.matchScore">78%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-2 text-sm">
+                                <div class="flex items-center text-gray-600">
+                                    <i class="fas fa-building text-xs w-4 mr-2"></i>
+                                    <span data-bind="medicine.manufacturer_name">Alembic Pharmaceuticals Ltd</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <i class="fas fa-flask text-xs w-4 mr-2"></i>
+                                    <span data-bind="medicine.short_composition">Azithromycin (500mg)</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <i class="fas fa-prescription-bottle text-xs w-4 mr-2"></i>
+                                    <span data-bind="medicine.category">Tablet</span>
+                                    <span class="mx-2">•</span>
+                                    <span class="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs" data-bind="medicine.rx_required">Prescription Required</span>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 flex space-x-2">
+                                <button class="px-3 py-1 bg-medical-primary text-white text-xs rounded hover:bg-blue-700 transition-colors">
+                                    View Details
+                                </button>
+                                <button class="px-3 py-1 border border-gray-300 text-gray-700 text-xs rounded hover:bg-gray-50 transition-colors">
+                                    Save to List
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_MAP )) -->
+                </div>
+
+                <!-- No Results State -->
+                <div class="text-center py-8 hidden" id="noResultsState">
+                    <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+                    <h4 class="text-lg font-medium text-gray-500 mb-2">No matches found</h4>
+                    <p class="text-sm text-gray-400">Try writing more clearly or use manual search</p>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: ResultsPanel -->
+        </div>
+
+        <!-- Statistics Section -->
+        <div class="mt-8 bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-chart-bar text-medical-primary mr-2"></i>
+                Database Statistics
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="text-center p-4 bg-blue-50 rounded-lg">
+                    <div class="text-2xl font-bold text-medical-primary" data-mock="true">313,924</div>
+                    <div class="text-sm text-gray-600">Total Medicines</div>
+                </div>
+                <div class="text-center p-4 bg-green-50 rounded-lg">
+                    <div class="text-2xl font-bold text-medical-success" data-mock="true">2,547</div>
+                    <div class="text-sm text-gray-600">Manufacturers</div>
+                </div>
+                <div class="text-center p-4 bg-purple-50 rounded-lg">
+                    <div class="text-2xl font-bold text-purple-600" data-mock="true">15</div>
+                    <div class="text-sm text-gray-600">Categories</div>
+                </div>
+                <div class="text-center p-4 bg-orange-50 rounded-lg">
+                    <div class="text-2xl font-bold text-medical-warning" data-mock="true">94%</div>
+                    <div class="text-sm text-gray-600">Recognition Accuracy</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Section -->
+        <div class="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3">
+                <i class="fas fa-info-circle text-medical-primary mr-2"></i>
+                How to Use
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-700">
+                <div class="flex items-start space-x-3">
+                    <div class="bg-medical-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">1</div>
+                    <div>
+                        <h4 class="font-medium mb-1">Write Clearly</h4>
+                        <p>Use clear, block letters for better recognition accuracy</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <div class="bg-medical-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">2</div>
+                    <div>
+                        <h4 class="font-medium mb-1">Review Results</h4>
+                        <p>Check recognition candidates and confidence scores</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <div class="bg-medical-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">3</div>
+                    <div>
+                        <h4 class="font-medium mb-1">Verify Matches</h4>
+                        <p>Review medicine details and match percentages</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-12">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-500">
+                    © 2024 MedScript. Powered by Google Handwriting Recognition API
+                </div>
+                <div class="flex space-x-6 text-sm text-gray-500">
+                    <a href="#" class="hover:text-gray-700">Privacy Policy</a>
+                    <a href="#" class="hover:text-gray-700">Terms of Service</a>
+                    <a href="#" class="hover:text-gray-700">Contact</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        (function() {
+            // TODO: Implement business logic, API calls, and state management
+            
+            // Canvas initialization and drawing functionality
+            let canvas = document.getElementById('handwritingCanvas');
+            let ctx = canvas.getContext('2d');
+            let isDrawing = false;
+            let strokes = [];
+            let currentStroke = [];
+            
+            // Canvas event handlers (basic implementation)
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('touchstart', handleTouch);
+            canvas.addEventListener('touchmove', handleTouch);
+            canvas.addEventListener('touchend', stopDrawing);
+            
+            function startDrawing(e) {
+                isDrawing = true;
+                currentStroke = [];
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                currentStroke.push({ x, y, time: Date.now() });
+                
+                // Hide instructions when user starts drawing
+                document.getElementById('canvasInstructions').style.display = 'none';
+            }
+            
+            function draw(e) {
+                if (!isDrawing) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#1976D2';
+                
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                
+                currentStroke.push({ x, y, time: Date.now() });
+            }
+            
+            function stopDrawing() {
+                if (!isDrawing) return;
+                isDrawing = false;
+                ctx.beginPath();
+                
+                if (currentStroke.length > 0) {
+                    strokes.push([...currentStroke]);
+                    currentStroke = [];
+                    
+                    // Trigger recognition if real-time is enabled
+                    const realTimeCheckbox = document.querySelector('input[type="checkbox"]');
+                    if (realTimeCheckbox && realTimeCheckbox.checked) {
+                        // TODO: Call recognition API with delay
+                        setTimeout(() => {
+                            recognizeHandwriting();
+                        }, 1000);
+                    }
+                }
+            }
+            
+            function handleTouch(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                if (!touch) return;
+                
+                const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                                 e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            }
+            
+            // Clear canvas functionality
+            document.querySelector('[data-event="click:clearCanvas"]').addEventListener('click', function() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                strokes = [];
+                currentStroke = [];
+                document.getElementById('canvasInstructions').style.display = 'flex';
+                
+                // Clear results
+                clearResults();
+            });
+            
+            // Undo last stroke
+            document.querySelector('[data-event="click:undoStroke"]').addEventListener('click', function() {
+                if (strokes.length > 0) {
+                    strokes.pop();
+                    redrawCanvas();
+                }
+            });
+            
+            function redrawCanvas() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                if (strokes.length === 0) {
+                    document.getElementById('canvasInstructions').style.display = 'flex';
+                    return;
+                }
+                
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#1976D2';
+                
+                strokes.forEach(stroke => {
+                    if (stroke.length > 0) {
+                        ctx.beginPath();
+                        ctx.moveTo(stroke[0].x, stroke[0].y);
+                        stroke.forEach(point => {
+                            ctx.lineTo(point.x, point.y);
+                        });
+                        ctx.stroke();
+                    }
+                });
+            }
+            
+            // Recognition functionality
+            function recognizeHandwriting() {
+                if (strokes.length === 0) {
+                    alert('Please write something first!');
+                    return;
+                }
+                
+                // Show loading state
+                const statusDiv = document.getElementById('recognitionStatus');
+                statusDiv.classList.remove('hidden');
+                
+                // TODO: Implement actual Google Handwriting Recognition API call
+                // For now, simulate with mock data
+                setTimeout(() => {
+                    statusDiv.classList.add('hidden');
+                    
+                    // Mock recognition results
+                    const mockResults = [
+                        { text: 'Augmentin', confidence: 0.95 },
+                        { text: 'Azithral', confidence: 0.78 },
+                        { text: 'Amoxicillin', confidence: 0.65 }
+                    ];
+                    
+                    displayResults(mockResults);
+                    performMedicineMatching(mockResults);
+                }, 2000);
+            }
+            
+            function displayResults(candidates) {
+                // TODO: Update recognition candidates display
+                console.log('Recognition candidates:', candidates);
+            }
+            
+            function performMedicineMatching(candidates) {
+                // TODO: Implement fuzzy string matching with medicine database
+                // TODO: Load and process CSV data
+                // TODO: Apply string matching algorithms (Levenshtein distance, etc.)
+                // TODO: Rank and display matches
+                
+                console.log('Performing medicine matching for:', candidates);
+            }
+            
+            function clearResults() {
+                // TODO: Clear results display
+                console.log('Clearing results');
+            }
+            
+            // Manual search functionality
+            document.querySelector('input[placeholder="Or search manually..."]').addEventListener('input', function(e) {
+                const query = e.target.value;
+                if (query.length > 2) {
+                    // TODO: Implement manual search through medicine database
+                    console.log('Manual search for:', query);
+                }
+            });
+            
+            // Recognize button click handler
+            document.querySelector('[data-event="click:recognizeHandwriting"]').addEventListener('click', recognizeHandwriting);
+        })();
+    </script>
+</body>
+</html>
